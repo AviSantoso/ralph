@@ -122,7 +122,7 @@ Frontend stories are NOT complete until visually verified. Ralph will use the de
 2. **IDs**: Sequential (US-001, US-002, etc.)
 3. **Priority**: Based on dependency order, then document order
 4. **All stories**: `passes: false` and empty `notes`
-5. **branchName**: Derive from feature name, kebab-case, prefixed with `ralph/`
+5. **branchName**: Derive from feature name, kebab-case, prefixed with `ralph/`. Note: this field is used by `ralph.sh` for archiving and tracking purposes only — agents must NOT switch to or create this branch; they always work on the current branch.
 6. **Always add**: "Typecheck passes" to every story's acceptance criteria
 
 ---
