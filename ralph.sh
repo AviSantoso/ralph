@@ -81,11 +81,19 @@ fi
 
 echo "Starting Ralph - Tool: $TOOL - Max iterations: $MAX_ITERATIONS"
 
+INITIAL_INCOMPLETE=$(jq '[.userStories[] | select(.passes == false)] | length' "$PRD_FILE" 2>/dev/null || echo "1")
+if [ "$INITIAL_INCOMPLETE" -eq 0 ]; then
+  echo "Ralph finished because all PRD items are complete."
+  exit 0
+fi
+
 for i in $(seq 1 $MAX_ITERATIONS); do
   echo ""
   echo "==============================================================="
   echo "  Ralph Iteration $i of $MAX_ITERATIONS ($TOOL)"
   echo "==============================================================="
+
+  BEFORE_INCOMPLETE=$(jq '[.userStories[] | select(.passes == false)] | length' "$PRD_FILE" 2>/dev/null || echo "1")
 
   # Run the selected tool with the ralph prompt
   if [[ "$TOOL" == "amp" ]]; then
@@ -97,20 +105,33 @@ for i in $(seq 1 $MAX_ITERATIONS); do
     OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr) || true
   fi
   
-  # Check completion by reading prd.json directly (don't trust model self-reporting)
-  INCOMPLETE=$(jq '[.userStories[] | select(.passes == false)] | length' "$PRD_FILE" 2>/dev/null || echo "1")
-  if [ "$INCOMPLETE" -eq 0 ]; then
+  # Decide overall run state by reading prd.json directly (don't trust model self-reporting)
+  AFTER_INCOMPLETE=$(jq '[.userStories[] | select(.passes == false)] | length' "$PRD_FILE" 2>/dev/null || echo "1")
+  STORY_COMPLETED=0
+  if [ "$AFTER_INCOMPLETE" -lt "$BEFORE_INCOMPLETE" ]; then
+    STORY_COMPLETED=1
+  fi
+
+  if [ "$STORY_COMPLETED" -eq 1 ]; then
+    if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then
+      echo "Agent completed one story and reported COMPLETE."
+    else
+      echo "Agent completed one story, but did not report <promise>COMPLETE</promise>."
+    fi
+  fi
+
+  if [ "$AFTER_INCOMPLETE" -eq 0 ]; then
     echo ""
-    echo "Ralph completed all tasks!"
+    echo "Ralph finished because all PRD items are complete."
     echo "Completed at iteration $i of $MAX_ITERATIONS"
     exit 0
   fi
   
-  echo "Iteration $i complete. Continuing..."
+  echo "Ralph continuing because stories remain."
   sleep 2
 done
 
 echo ""
-echo "Ralph reached max iterations ($MAX_ITERATIONS) without completing all tasks."
+echo "Ralph stopped because max iterations were reached."
 echo "Check $PROGRESS_FILE for status."
 exit 1
