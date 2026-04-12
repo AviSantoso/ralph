@@ -99,10 +99,10 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   if [[ "$TOOL" == "amp" ]]; then
     OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" | amp --dangerously-allow-all 2>&1 | tee /dev/stderr) || true
   elif [[ "$TOOL" == "codex" ]]; then
-    OUTPUT=$(cat "$SCRIPT_DIR/prompt-codex.md" | codex exec --dangerously-bypass-approvals-and-sandbox - 2>&1 | tee /dev/stderr) || true
+    OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" | codex exec --dangerously-bypass-approvals-and-sandbox - 2>&1 | tee /dev/stderr) || true
   elif [[ "$TOOL" == "opencode" ]]; then
-    # OpenCode: use --yolo for auto-approval, read prompt from stdin
-    OUTPUT=$(cat "$SCRIPT_DIR/prompt-opencode.md" | opencode run --yolo -p - 2>&1 | tee /dev/stderr) || true
+    # OpenCode: use --dangerously-skip-permissions for auto-approval
+    OUTPUT=$(opencode run --dangerously-skip-permissions --file "$SCRIPT_DIR/prompt.md" 2>&1 | tee /dev/stderr) || true
   else
     # Claude Code: use --dangerously-skip-permissions for autonomous operation, --print for output
     OUTPUT=$(claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 | tee /dev/stderr) || true
